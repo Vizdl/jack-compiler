@@ -1,1 +1,62 @@
 这是一个Jack语言编译器,主要目的就是将Jack语言编译成VM语言。
+
+运行环境 : g++-4.8, linux。(在当前文件下已包含了可执行文件,如若无g++-4.8也无影响)
+
+使用之前 : 在README文件目录下,进行 make.
+
+make后生成的可执行文件的作用.
+    ./parser : 将.jack文件生成为ast(语法分析树),且序列化为字符串形式。
+    ./optimiser-r : 对ast序列化后的文本进行 反序列化, 删除语法分析树冗余节点,再次序列化为字符串形式。
+    ./codegen : 将 序列化ast文本 进行反序列化为ast, 进行翻译工作,将语法分析树翻译成VM语言(一种虚拟机中间语言)。
+    ./pretty : 将序列化ast文本先反序列化为ast, 然后将ast 反编译为 对齐的 .jack 文件。
+    并且做一些语法上的合并,使反编译后的代码更加优雅。
+
+如何使用?
+    测试案例测试 :
+        在当前目录下 make,会自动测试 ./test/内所有的测试案例。
+
+    自定义案例测试(tests/02/Main.jack) : 按当前例子可自行利用上述所有make生成的可执行文件。
+        cat tests/Square/Square.jack | ./parser | ./optimiser-r  | ./codegen | cat
+        上一行语句通过 ./parser 分析将.jack文件生成为ast(语法分析树),然后通过 ./optimiser-r 优化,删除冗余语法分析树节点.
+        最后通过 ./codegen 将语法分析树编译为 VM 语言。
+
+测试案例 :
+    ./test/ 内所有.jack所展示的语法都支持。包括 构造函数, 类成员函数, 类静态函数, 全局变量,局部变量,类成员变量。
+    多元运算 等等...几乎所有的面向对象基本语法。
+
+
+Jack语言支持的语法BNF定义:
+program          ::= One or more classes, each class in a separate file named <class_name>'.Jack'
+class            ::= 'class' identifier '{' class_var_decs subr_decs '}'
+class_var_decs   ::= (static_var_dec | field_var_dec)*
+static_var_dec   ::= 'static' type identifier (',' identifier)* ';'
+field_var_dec    ::= 'field' type identifier (',' identifier)* ';'
+type             ::= 'int' | 'char' | 'boolean' | identifier
+vtype            ::= 'void' | type
+subr_decs        ::= (constructor | function | method)*
+constructor      ::= 'constructor' identifier identifier '(' param_list ')' subr_body
+function         ::= 'function' vtype identifier '(' param_list ')' subr_body
+method           ::= 'method' vtype identifier '(' param_list ')' subr_body
+param_list       ::= ((type identifier) (',' type identifier)*)?
+subr_body        ::= '{' var_decs statements '}'
+var_decs         ::= var_dec*
+var_dec          ::= 'var' type identifier (',' identifier)* ';'
+
+statements       ::= statement*
+statement        ::= let | if | while | do | return
+let              ::= 'let' identifier index? '=' expr ';'
+if               ::= 'if' '(' expr ')' '{' statements '}' ('else' '{' statements '}')?
+while            ::= 'while' '(' expr ')' '{' statements '}'
+do               ::= 'do' identifier (id_call | call) ';'
+return           ::= 'return' expr? ';'
+
+expr             ::= term (infix_op term)*
+term             ::= integer_constant | string_constant | 'true' | 'false' | 'null' | 'this' | '(' expr ')' | unary_op term | var_term
+var_term         ::= identifier (index | id_call | call)?
+index            ::= '[' expr ']'
+id_call          ::= '.' identifier call
+call             ::= '(' expr_list ')'
+expr_list        ::= (expr (',' expr)*)?
+infix_op         ::= '+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '='
+unary_op         ::= '-' | '~'
+
